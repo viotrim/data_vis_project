@@ -1,6 +1,6 @@
 # 琼瑶文学作品可视化
 
-https://observablehq.com/d/c2599172cef5b995@63
+https://observablehq.com/d/c2599172cef5b995@64
 
 View this notebook in your browser by running a web server in this folder. For
 example:
@@ -14,7 +14,7 @@ import this module directly into your application. To npm install:
 
 ~~~sh
 npm install @observablehq/runtime@5
-npm install https://api.observablehq.com/d/c2599172cef5b995@63.tgz?v=3
+npm install https://api.observablehq.com/d/c2599172cef5b995@64.tgz?v=3
 ~~~
 
 Then, import your notebook and the runtime as:
