@@ -1,0 +1,14 @@
+{
+  "name": "c2599172cef5b995",
+  "main": "c2599172cef5b995@45.js",
+  "version": "45.0.0",
+  "homepage": "https://observablehq.com/d/c2599172cef5b995",
+  "author": {
+    "name": "FoxSama",
+    "url": "https://observablehq.com/@foxsama"
+  },
+  "type": "module",
+  "peerDependencies": {
+    "@observablehq/runtime": "4 - 5"
+  }
+}
