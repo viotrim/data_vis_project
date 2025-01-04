@@ -22,9 +22,6 @@ jobs:
 
       - name: Install dependencies and build project
         run: |
-          pwd
-          ls  
-          cd final
           npm ci
           npm run build
         working-directory: ./final # 这个动作支持 working-directory 参数
