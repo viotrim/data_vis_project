@@ -1,0 +1,45 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main # 监听推送至 'main' 分支的事件
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          submodules: true # 如果使用了子模块
+
+      - name: Navigate to final directory and setup Node.js environment
+        run: |
+          cd final
+          npx --no-install # Ensure npm is available in the current shell
+          npx which node # Verify that Node.js is available
+        working-directory: ./final
+
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v2
+        with:
+          node-version: "14" # 使用的Node版本，根据需要调整
+        working-directory: ./final
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: ./final
+
+      - name: Build project
+        run: npm run build
+        working-directory: ./final
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./final/dist # 注意这里的路径是相对于根目录的
+          publish_branch: gh-pages
+          commit_message: ${{ github.event.head_commit.message }}
