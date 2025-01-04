@@ -1,5 +1,30 @@
 <template>
   <div class="map-container">
+    <div
+      :class="[
+        'button-container',
+        { 'button-container-overlay': showPieChart },
+      ]"
+    >
+      <button
+        :class="{ active: currentDataType === 'uploads' }"
+        @click="updateDataType('uploads')"
+      >
+        上传数量
+      </button>
+      <button
+        :class="{ active: currentDataType === 'subs' }"
+        @click="updateDataType('subs')"
+      >
+        订阅人数
+      </button>
+      <button
+        :class="{ active: currentDataType === 'videoviews' }"
+        @click="updateDataType('videoviews')"
+      >
+        视频观看次数
+      </button>
+    </div>
     <div ref="map" class="map__content"></div>
     <div v-if="showPieChart" class="overlay">
       <div ref="pieChart" class="pie-chart"></div>
@@ -17,7 +42,13 @@ import {
   reverseWorldNameMap,
   worldGeoMap,
 } from "@/assets/worldNameMap";
-// const icon = require("@/assets/img/risk-icon.png");
+import {
+  totaldata,
+  markPointData,
+  detailData,
+  detailedCountry,
+  thumbnailData,
+} from "@/assets/youtubeData";
 
 export default {
   data() {
@@ -25,13 +56,18 @@ export default {
       worldNameMap,
       reverseWorldNameMap,
       worldGeoMap,
+      totaldata,
+      markPointData,
+      detailData,
+      detailedCountry,
+      thumbnailData,
       showPieChart: false,
       chartDom: null,
       pieChartDom: null,
+      currentRegion: null,
       layoutSize: "150%",
       centerCoord: [0, 0],
-      markPointData: [],
-      riskData: [],
+      currentDataType: "uploads", // 当前展示的数据类型
     };
   },
   mounted() {
@@ -39,10 +75,14 @@ export default {
   },
   computed: {
     option() {
+      const dataType = this.currentDataType;
+      const dataValues = this.totaldata.map((item) => item[dataType]);
+      const min = Math.min(...dataValues);
+      const max = Math.max(...dataValues);
       return {
         tooltip: {
           trigger: "item",
-          backgroundColor: "#fff",
+          backgroundColor: "#dfe2f5",
           textStyle: {
             color: "#666666",
           },
@@ -50,39 +90,39 @@ export default {
           borderColor: "#ECECEE",
           padding: 10,
           formatter: function (params) {
-            var value = params.value ? params.value : 0;
-            return "风险个数<br/>" + params.name + " : " + value + "个";
+            var uploads = params.data.uploads ? params.data.uploads : 0;
+            var subs = params.data.subs ? params.data.subs : 0;
+            var vedioviews = params.data.videoviews
+              ? params.data.videoviews
+              : 0;
+            return `<div style="text-align: left;">
+    <strong>${params.name}</strong> : <br/>
+    <span>上传数量: ${uploads} 次</span><br/>
+    <span>订阅人数: ${subs} 人</span><br/>
+    <span>视频观看次数: ${vedioviews} 次</span>
+  </div>`;
           },
         },
         visualMap: {
-          type: "piecewise",
-          splitNumber: 3,
-          inverse: true,
+          type: "continuous",
+          min: min,
+          max: max,
           right: 50,
           top: 50,
-          pieces: [
-            {
-              min: 0,
-              max: 100,
-              color: "#dfe2f5",
-            },
-            {
-              min: 100,
-              max: 500,
-              color: "#b5c1eb",
-            },
-            {
-              min: 500,
-              max: 1000,
-              color: "#839aee",
-            },
-          ],
+          inRange: {
+            color: [
+              "#ccffcc", // 浅绿
+              "#99ff99", // 稍深一点的绿
+              "#66ff66", // 再深一点的绿
+              "#33ff33", // 更接近原始的绿色
+              "#00ff00", // 原始的绿色
+              "#4c004c", // 向紫色过渡
+              "#800080", // 紫色
+            ],
+          },
           textStyle: {
             color: "#6E7784",
           },
-          itemWidth: 40,
-          itemHeight: 10,
-          align: "left",
         },
         center: this.centerCoord,
         layoutCenter: ["50%", "50%"],
@@ -119,7 +159,13 @@ export default {
               },
               data: this.markPointData,
             },
-            data: this.riskData,
+            data: this.totaldata.map((item) => ({
+              name: item.name,
+              value: item[dataType], // 根据 currentDataType 设置 value
+              uploads: item.uploads,
+              subs: item.subs,
+              videoviews: item.videoviews,
+            })),
           },
         ],
       };
@@ -140,41 +186,21 @@ export default {
     layoutSize(newSize) {
       this.layoutSize = newSize;
     },
+    currentDataType(newType) {
+      this.currentDataType = newType;
+      if (this.showPieChart && this.currentRegion) {
+        this.initPieChart(this.currentRegion);
+      }
+    },
   },
   methods: {
+    updateDataType(type) {
+      this.currentDataType = type;
+      this.initData(); // 更新图表数据
+    },
     initData() {
       echarts.registerMap("world", worldMapJson);
       this.chartDom = echarts.init(this.$refs.map);
-      this.riskData = [
-        { name: "中国", value: 120 },
-        { name: "澳大利亚", value: 120 },
-        { name: "巴西", value: 170 },
-        { name: "加拿大", value: 570 },
-        { name: "美国", value: 570 },
-        { name: "墨西哥", value: 570 },
-        { name: "古巴", value: 530 },
-        { name: "西班牙", value: 70 },
-      ];
-      this.markPointData = [
-        {
-          name: "中国",
-          coord: this.worldGeoMap["中国"],
-          // symbol: "image://" + icon,
-          symbolSize: 20,
-        },
-        {
-          name: "澳大利亚",
-          coord: this.worldGeoMap["澳大利亚"],
-          // symbol: "image://" + icon,
-          symbolSize: 20,
-        },
-        {
-          name: "加拿大",
-          coord: this.worldGeoMap["加拿大"],
-          // symbol: "image://" + icon,
-          symbolSize: 20,
-        },
-      ];
       this.chartDom.setOption(this.option);
       let sizeFun = () => {
         this.chartDom.resize();
@@ -182,6 +208,10 @@ export default {
       window.addEventListener("resize", sizeFun);
       this.chartDom.on("click", { seriesType: "map" }, (params) => {
         const regionName = params.name;
+        // 检查 regionName 是否在 detailedCountry 中
+        if (!this.detailedCountry.includes(regionName)) {
+          return;
+        }
         const translatedRegionName =
           this.reverseWorldNameMap[regionName] || regionName; // 转换区域名称
         const feature = echarts
@@ -196,17 +226,17 @@ export default {
           //   `点击区域${regionName},中心点${regionCoord},地图坐标${this.worldGeoMap[regionName]}`
           // );
           const regionCoord = this.worldGeoMap[regionName];
-          this.zoomToRegion(regionCoord);
+          this.zoomToRegion(regionCoord, regionName);
         } else {
           console.error(`Region ${regionName} not found in geoJson`);
         }
       });
-      onUnmounted(() => {
-        window.removeEventListener("resize", sizeFun);
-        if (this.chartDom) {
-          echarts.dispose(this.chartDom);
-        }
-      });
+      // onUnmounted(() => {
+      //   window.removeEventListener("resize", sizeFun);
+      //   if (this.chartDom) {
+      //     echarts.dispose(this.chartDom);
+      //   }
+      // });
     },
     // calculateCentroid(geometry) {
     //   let [x, y] = [0, 0];
@@ -224,29 +254,39 @@ export default {
     //   y /= coordinates.length;
     //   return [x, y];
     // },
-    zoomToRegion(regionCoord) {
+    zoomToRegion(regionCoord, regionName) {
       // 放大动画
       this.centerCoord = regionCoord;
       this.layoutSize = "400%"; // 设置放大级别
       // console.log(this.option);
       this.showPieChart = true;
-      this.initPieChart();
+      this.currentRegion = regionName;
+      this.initPieChart(regionName);
     },
-    initPieChart() {
+    initPieChart(regionName) {
       nextTick(() => {
         this.pieChartDom = echarts.init(this.$refs.pieChart);
+        const pieData = this.detailData[regionName].map((item) => ({
+          name: item.name,
+          value: item[this.currentDataType],
+          thumbnailAddr: this.thumbnailData[regionName][item.id],
+        }));
         let pieoption = {
+          tooltip: {
+            trigger: "item",
+            formatter: function (params) {
+              const { name, value, data } = params;
+              const thumbnail = data.thumbnailAddr
+                ? `<img src="${data.thumbnailAddr}" style="width:50px;height:50px;"/><br/>`
+                : "";
+              return `${thumbnail}<strong>${name}</strong>: ${value}`;
+            },
+          },
           series: [
             {
               type: "pie",
-              radius: "100%",
-              data: [
-                { value: 1048, name: "A" },
-                { value: 735, name: "B" },
-                { value: 580, name: "C" },
-                { value: 484, name: "D" },
-                { value: 300, name: "E" },
-              ],
+              radius: "80%",
+              data: pieData,
             },
           ],
         };
@@ -257,6 +297,7 @@ export default {
       this.showPieChart = false;
       this.centerCoord = [0, 0];
       this.layoutSize = "150%";
+      this.currentRegion = null;
       if (this.pieChartDom) {
         echarts.dispose(this.pieChartDom);
         this.pieChartDom = null;
@@ -272,8 +313,37 @@ export default {
   &__content {
     width: 100%;
     height: 100vh;
-    margin-top: -60px;
+    margin-top: -20px;
   }
+}
+.button-container-overlay {
+  opacity: 0.7; /* 颜色变淡 */
+}
+.button-container {
+  position: absolute;
+  display: flex;
+  justify-content: left;
+  font-size: 12px;
+  z-index: 1000;
+  left: 180px;
+  // margin-bottom: 10px;
+}
+.button-container button {
+  margin: 0 5px;
+  padding: 5px 10px;
+  background-color: #b5c1eb; /* 按钮背景颜色 */
+  color: rgb(255, 255, 255); /* 按钮文字颜色 */
+  border: none;
+  border-radius: 30px; /* 圆形边框 */
+  cursor: pointer;
+  transition: background-color 0.3s ease; /* 背景颜色过渡效果 */
+  font-size: 10px;
+}
+.button-container button.active {
+  background-color: #839aee; /* 选中时的背景颜色 */
+}
+.button-container button:hover {
+  background-color: #dfe2f5; /* 悬停时的背景颜色 */
 }
 .overlay {
   position: absolute;
@@ -285,10 +355,11 @@ export default {
   display: flex;
   justify-content: center;
   align-items: center;
+  z-index: 500;
 }
 .pie-chart {
-  width: 70%;
-  height: 70%;
+  width: 100%;
+  height: 100%;
 }
 .close-btn {
   position: absolute;
