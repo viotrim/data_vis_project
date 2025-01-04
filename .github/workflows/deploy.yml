@@ -22,6 +22,8 @@ jobs:
 
       - name: Install dependencies and build project
         run: |
+          pwd
+          ls  
           cd final
           npm ci
           npm run build
