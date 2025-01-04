@@ -15,31 +15,22 @@ jobs:
         with:
           submodules: true # 如果使用了子模块
 
-      - name: Navigate to final directory and setup Node.js environment
-        run: |
-          cd final
-          npx --no-install # Ensure npm is available in the current shell
-          npx which node # Verify that Node.js is available
-        working-directory: ./final
-
       - name: Setup Node.js environment
         uses: actions/setup-node@v2
         with:
           node-version: "14" # 使用的Node版本，根据需要调整
-        working-directory: ./final
 
-      - name: Install dependencies
-        run: npm ci
-        working-directory: ./final
-
-      - name: Build project
-        run: npm run build
-        working-directory: ./final
+      - name: Install dependencies and build project
+        run: |
+          cd final
+          npm ci
+          npm run build
+        working-directory: ./final # 这个动作支持 working-directory 参数
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./final/dist # 注意这里的路径是相对于根目录的
-          publish_branch: gh-pages
-          commit_message: ${{ github.event.head_commit.message }}
+          publish_dir: "./final/dist" # 构建输出文件夹，相对于仓库根目录
+          publish_branch: "gh-pages" # 发布到 gh-pages 分支
+          commit_message: ${{ github.event.head_commit.message }} # 使用最近提交的信息作为提交消息
