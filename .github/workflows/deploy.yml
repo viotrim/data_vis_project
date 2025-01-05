@@ -28,9 +28,9 @@ jobs:
 
       - name: Install dependencies and build project
         run: |
-          npm install
+          npm install                
           npm run build
-        working-directory: ./final # 这个动作支持 working-directory 参数
+        working-directory: ./final # 这个动作支持 working-directory 参数  #npm ci不起作用
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
