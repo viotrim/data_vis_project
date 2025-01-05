@@ -11,19 +11,19 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           submodules: true # 如果使用了子模块
 
       - name: Setup Node.js environment
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v3
         with:
-          node-version: "14" # 使用的Node版本，根据需要调整
+          node-version: "18" # 使用的Node版本，根据需要调整
 
       - name: Setup Node.js environment with mirror
         uses: actions/setup-node@v2
         with:
-          node-version: "14"
+          node-version: "18"
           registry-url: https://registry.npmmirror.com/
 
       - name: Install dependencies and build project
