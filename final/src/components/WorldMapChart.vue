@@ -1,10 +1,7 @@
 <template>
   <div class="map-container">
     <div
-      :class="[
-        'button-container',
-        { 'button-container-overlay': showPieChart },
-      ]"
+      :class="['button-container', { 'button-container-overlay': showChart }]"
     >
       <button
         :class="{ active: currentDataType === 'uploads' }"
@@ -26,8 +23,22 @@
       </button>
     </div>
     <div ref="map" class="map__content"></div>
-    <div v-if="showPieChart" class="overlay">
-      <div ref="pieChart" class="pie-chart"></div>
+    <div v-if="showChart" class="overlay">
+      <div class="button-container button-container-overlay chart-type-buttons">
+        <button
+          :class="{ active: chartType === 'pie' }"
+          @click="changeChartType('pie')"
+        >
+          饼图
+        </button>
+        <button
+          :class="{ active: chartType === 'bar' }"
+          @click="changeChartType('bar')"
+        >
+          柱状图
+        </button>
+      </div>
+      <div ref="chart" :class="chartClass"></div>
       <button class="close-btn" @click="resetMap">x</button>
     </div>
   </div>
@@ -61,13 +72,16 @@ export default {
       detailData,
       detailedCountry,
       thumbnailData,
-      showPieChart: false,
+      showChart: false,
+      chartType: "pie",
       chartDom: null,
       pieChartDom: null,
+      barChartDom: null,
       currentRegion: null,
       layoutSize: "150%",
       centerCoord: [0, 0],
       currentDataType: "uploads", // 当前展示的数据类型
+      chartClass: "pie-chart",
     };
   },
   mounted() {
@@ -187,16 +201,26 @@ export default {
       this.layoutSize = newSize;
     },
     currentDataType(newType) {
-      this.currentDataType = newType;
-      if (this.showPieChart && this.currentRegion) {
-        this.initPieChart(this.currentRegion);
+      // this.currentDataType = newType;
+      if (this.showChart && this.currentRegion) {
+        this.initChart(this.currentRegion);
+      }
+    },
+    chartType(newType) {
+      // this.chartType = newType;
+      this.chartClass = newType === "pie" ? "pie-chart" : "bar-chart";
+      if (this.showChart && this.currentRegion) {
+        this.initChart(this.currentRegion);
       }
     },
   },
   methods: {
     updateDataType(type) {
       this.currentDataType = type;
-      this.initData(); // 更新图表数据
+      // this.initData(); // 更新图表数据
+    },
+    changeChartType(type) {
+      this.chartType = type;
     },
     initData() {
       echarts.registerMap("world", worldMapJson);
@@ -259,19 +283,39 @@ export default {
       this.centerCoord = regionCoord;
       this.layoutSize = "400%"; // 设置放大级别
       // console.log(this.option);
-      this.showPieChart = true;
+      this.showChart = true;
       this.currentRegion = regionName;
-      this.initPieChart(regionName);
+      this.initChart(regionName);
+    },
+    initChart(regionName) {
+      switch (this.chartType) {
+        case "pie":
+          this.initPieChart(regionName);
+          break;
+        case "bar":
+          this.initBarChart(regionName);
+          break;
+        default:
+          console.warn(`Unknown chart type: ${this.chartType}`);
+      }
     },
     initPieChart(regionName) {
       nextTick(() => {
-        this.pieChartDom = echarts.init(this.$refs.pieChart);
+        this.pieChartDom = echarts.init(this.$refs.chart);
         const pieData = this.detailData[regionName].map((item) => ({
           name: item.name,
           value: item[this.currentDataType],
           thumbnailAddr: this.thumbnailData[regionName][item.id],
         }));
         let pieoption = {
+          // 初始化渲染的动画配置
+          animation: true,
+          animationDuration: 1000, // 初始渲染动画持续时间 (毫秒)
+          animationEasing: "circularInOut", // 初始渲染动画缓动函数
+
+          // 更新时的动画配置
+          animationDurationUpdate: 3000, // 更新动画持续时间 (毫秒)，这里设置为2秒
+          animationEasingUpdate: "circularInOut", // 更新动画缓动函数
           tooltip: {
             trigger: "item",
             formatter: function (params) {
@@ -293,8 +337,87 @@ export default {
         this.pieChartDom.setOption(pieoption);
       });
     },
+    initBarChart(regionName) {
+      nextTick(() => {
+        this.barChartDom = echarts.init(this.$refs.chart);
+        const barData = this.detailData[regionName].map((item) => ({
+          name: item.name,
+          value: item[this.currentDataType],
+          thumbnailAddr: this.thumbnailData[regionName][item.id],
+        }));
+        let baroption = {
+          // 初始化渲染的动画配置
+          animation: true,
+          animationDuration: 1000, // 初始渲染动画持续时间 (毫秒)
+          animationEasing: "cubicInOut", // 初始渲染动画缓动函数
+
+          // 更新时的动画配置
+          animationDurationUpdate: 2000, // 更新动画持续时间 (毫秒)，这里设置为2秒
+          animationEasingUpdate: "cubicInOut", // 更新动画缓动函数
+          tooltip: {
+            trigger: "item",
+            formatter: function (params) {
+              const { name, value, data } = params;
+              const thumbnail = data.thumbnailAddr
+                ? `<img src="${data.thumbnailAddr}" style="width:50px;height:50px;"/><br/>`
+                : "";
+              return `${thumbnail}<strong>${name}</strong>: ${value}`;
+            },
+          },
+          color: ["#3398DB"],
+          yAxis: {
+            type: "category",
+            axisPointer: {
+              show: false, //默认不显示
+              type: "shadow", //'line'直线指示器 'shadow'阴影指示器 'none'无
+            },
+            axisLine: {
+              show: false, //是否显示y轴，默认显示
+            },
+            axisLabel: {
+              show: true, //是否显示
+              color: "#333", //文字颜色
+              // interval: 0, //间隔显示个数
+              // rotate: 0, //刻度标签旋转的角度，值>0向左倾斜，值<0则向右倾斜，旋转的角度从 -90 度到 90 度。
+            },
+            data: barData.map((item) => item.name),
+          },
+          xAxis: {
+            type: "value",
+            axisPointer: {
+              show: false, //默认不显示
+              type: "shadow", //'line'直线指示器 'shadow'阴影指示器 'none'无
+            },
+            // axisLine: {
+            //   show: true, // 显示X轴
+            //   lineStyle: {
+            //     color: "#ccc", // X轴颜色
+            //   },
+            // },
+            axisLabel: {
+              show: true, // 显示标签
+              color: "#333", // 标签颜色
+            },
+            splitLine: {
+              show: true, // 显示网格线
+              lineStyle: {
+                color: "rgba(255, 255, 255, 0.05)", // 网格线颜色
+              },
+              // interval: 15, // 网格线间隔
+            },
+          },
+          series: [
+            {
+              type: "bar",
+              data: barData,
+            },
+          ],
+        };
+        this.barChartDom.setOption(baroption);
+      });
+    },
     resetMap() {
-      this.showPieChart = false;
+      this.showChart = false;
       this.centerCoord = [0, 0];
       this.layoutSize = "150%";
       this.currentRegion = null;
@@ -345,6 +468,11 @@ export default {
 .button-container button:hover {
   background-color: #dfe2f5; /* 悬停时的背景颜色 */
 }
+.chart-type-buttons {
+  position: absolute;
+  top: 80px;
+  left: 220px;
+}
 .overlay {
   position: absolute;
   top: 0;
@@ -358,6 +486,10 @@ export default {
   z-index: 500;
 }
 .pie-chart {
+  width: 100%;
+  height: 100%;
+}
+.bar-chart {
   width: 100%;
   height: 100%;
 }
